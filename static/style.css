@@ -1,0 +1,19 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 40px;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+span {
+  cursor: pointer;
+  padding: 2px 4px;
+  margin: 2px;
+  display: inline-block;
+  background-color: #e1f5fe;
+  border-radius: 5px;
+}
+
+span:hover {
+  background-color: #81d4fa;
+}

@@ -1,0 +1,2 @@
+A web app that pronounces words or sentences aloud when clicked or tapped.
+This tool is designed to help young learners improve their reading and pronunciation skills using browser-based text-to-speech (TTS) technology.

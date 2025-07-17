@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kids Book Reader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    span {
+      cursor: pointer;
+      background-color: #e1f5fe;
+      padding: 4px;
+      margin: 2px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    span:hover {
+      background-color: #81d4fa;
+    }
+
+    select, button {
+      margin-bottom: 20px;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Read & Listen!</h1>
+
+  <!-- Voice selection -->
+  <label for="voiceSelect"><strong>Select Voice:</strong></label>
+  <select id="voiceSelect"></select>
+
+  <!-- Read full sentence button -->
+  <button onclick="readFullSentence()">🔊 Read Sentence</button>
+
+  <p id="book-text">
+    {% for word in text.split() %}
+      <span onclick="speak(this.innerText)">{{ word }}</span>
+    {% endfor %}
+  </p>
+
+  <script>
+    let voices = [];
+    let selectedVoice = null;
+
+    function populateVoiceList() {
+      voices = window.speechSynthesis.getVoices();
+
+      const voiceSelect = document.getElementById('voiceSelect');
+      voiceSelect.innerHTML = ''; // Clear old options
+
+      voices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        voiceSelect.appendChild(option);
+
+        if (
+          voice.name.includes("Google UK English Female") ||
+          voice.name.includes("Google US English") ||
+          voice.name.includes("Microsoft Zira")
+        ) {
+          voiceSelect.selectedIndex = index;
+          selectedVoice = voice;
+        }
+      });
+    }
+
+    function speak(text) {
+      const clean = text.replace(/[.,!?]/g, "");
+      const msg = new SpeechSynthesisUtterance(clean);
+      if (selectedVoice) msg.voice = selectedVoice;
+      msg.rate = 0.85;
+      window.speechSynthesis.speak(msg);
+    }
+
+    function readFullSentence() {
+      const textContainer = document.getElementById('book-text');
+      const fullText = textContainer.innerText;
+      const clean = fullText.replace(/\s+/g, ' ').replace(/[.,!?]/g, "");
+      const msg = new SpeechSynthesisUtterance(clean);
+      if (selectedVoice) msg.voice = selectedVoice;
+      msg.rate = 0.85;
+      window.speechSynthesis.speak(msg);
+    }
+
+    document.getElementById('voiceSelect').addEventListener('change', function () {
+      selectedVoice = voices[this.value];
+    });
+
+    populateVoiceList();
+    window.speechSynthesis.onvoiceschanged = populateVoiceList;
+  </script>
+</body>
+</html>
