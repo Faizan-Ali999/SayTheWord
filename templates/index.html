@@ -1,109 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kids Book Reader</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <style>
-    span {
-      cursor: pointer;
-      background-color: #e1f5fe;
-      padding: 4px;
-      margin: 2px;
-      border-radius: 4px;
-      display: inline-block;
-    }
+    <title>Clickable Image Text</title>
+    <style>
+        .image-container {
+            position: relative;
+            display: inline-block;
+        }
 
-    span:hover {
-      background-color: #81d4fa;
-    }
-
-    select, button {
-      margin-bottom: 20px;
-      padding: 8px;
-      font-size: 16px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-  </style>
+        .word-box {
+            position: absolute;
+            border: 1px solid rgba(0, 0, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>Read & Listen!</h1>
+    <h2>Upload an image</h2>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="image" required>
+        <input type="submit" value="Upload">
+    </form>
 
-  <!-- Voice selection -->
-  <label for="voiceSelect"><strong>Select Voice:</strong></label>
-  <select id="voiceSelect"></select>
+    {% if filename %}
+    <h3>Click on a word to hear it:</h3>
+    <div class="image-container">
+        <img src="{{ url_for('static', filename='uploads/' + filename) }}" id="uploadedImage">
+        <!-- Word Overlays -->
+        <script>
+            const boxes = JSON.parse(`{{ boxes | safe }}`);
+            const container = document.querySelector('.image-container');
+            const img = document.getElementById('uploadedImage');
 
-  <!-- Read full sentence button -->
-  <button onclick="readFullSentence()">🔊 Read Sentence</button>
+            img.onload = () => {
+                const scaleX = img.width / img.naturalWidth;
+                const scaleY = img.height / img.naturalHeight;
 
-  <p id="book-text">
-    {% for word in text.split() %}
-      <span onclick="speak(this.innerText)">{{ word }}</span>
-    {% endfor %}
-  </p>
+                boxes.forEach(box => {
+                    const div = document.createElement('div');
+                    div.className = 'word-box';
+                    div.style.left = (box.left * scaleX) + 'px';
+                    div.style.top = (box.top * scaleY) + 'px';
+                    div.style.width = (box.width * scaleX) + 'px';
+                    div.style.height = (box.height * scaleY) + 'px';
+                    div.title = box.text;
 
-  <script>
-    let voices = [];
-    let selectedVoice = null;
+                    div.onclick = () => {
+                        const utter = new SpeechSynthesisUtterance(box.text);
+                        speechSynthesis.speak(utter);
+                    };
 
-    function populateVoiceList() {
-      voices = window.speechSynthesis.getVoices();
-
-      const voiceSelect = document.getElementById('voiceSelect');
-      voiceSelect.innerHTML = ''; // Clear old options
-
-      voices.forEach((voice, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `${voice.name} (${voice.lang})`;
-        voiceSelect.appendChild(option);
-
-        if (
-          voice.name.includes("Google UK English Female") ||
-          voice.name.includes("Google US English") ||
-          voice.name.includes("Microsoft Zira")
-        ) {
-          voiceSelect.selectedIndex = index;
-          selectedVoice = voice;
-        }
-      });
-    }
-
-    function speak(text) {
-      const clean = text.replace(/[.,!?]/g, "");
-      const msg = new SpeechSynthesisUtterance(clean);
-      if (selectedVoice) msg.voice = selectedVoice;
-      msg.rate = 0.85;
-      window.speechSynthesis.speak(msg);
-    }
-
-    function readFullSentence() {
-      const textContainer = document.getElementById('book-text');
-      const fullText = textContainer.innerText;
-      const clean = fullText.replace(/\s+/g, ' ').replace(/[.,!?]/g, "");
-      const msg = new SpeechSynthesisUtterance(clean);
-      if (selectedVoice) msg.voice = selectedVoice;
-      msg.rate = 0.85;
-      window.speechSynthesis.speak(msg);
-    }
-
-    document.getElementById('voiceSelect').addEventListener('change', function () {
-      selectedVoice = voices[this.value];
-    });
-
-    populateVoiceList();
-    window.speechSynthesis.onvoiceschanged = populateVoiceList;
-  </script>
+                    container.appendChild(div);
+                });
+            };
+        </script>
+    </div>
+    {% endif %}
 </body>
 </html>
