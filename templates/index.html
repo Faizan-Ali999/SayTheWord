@@ -1,109 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kids Book Reader</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <style>
-    span {
-      cursor: pointer;
-      background-color: #e1f5fe;
-      padding: 4px;
-      margin: 2px;
-      border-radius: 4px;
-      display: inline-block;
-    }
+    <title>Clickable Image Text</title>
+    <style>
+        .image-container {
+            position: relative;
+            display: inline-block;
+        }
 
-    span:hover {
-      background-color: #81d4fa;
-    }
-
-    select, button {
-      margin-bottom: 20px;
-      padding: 8px;
-      font-size: 16px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-  </style>
+        .word-box {
+            position: absolute;
+            border: 1px solid rgba(0, 0, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>Read & Listen!</h1>
+    <label for="voiceSelect">Choose Voice:</label>
+    <select id="voiceSelect"></select>
 
-  <!-- Voice selection -->
-  <label for="voiceSelect"><strong>Select Voice:</strong></label>
-  <select id="voiceSelect"></select>
+    <h2>Upload an image</h2>
+    <form method="post" enctype="multipart/form-data">
+        <!-- Upload from local -->
+        <label>Choose from device:</label><br>
+        <input type="file" name="image" accept="image/*"><br><br>
 
-  <!-- Read full sentence button -->
-  <button onclick="readFullSentence()">🔊 Read Sentence</button>
+        <!-- Upload from camera -->
+        <label>Take a photo:</label><br>
+        <input type="file" name="image" accept="image/*" capture="environment"><br><br>
 
-  <p id="book-text">
-    {% for word in text.split() %}
-      <span onclick="speak(this.innerText)">{{ word }}</span>
-    {% endfor %}
-  </p>
+        <input type="submit" value="Upload">
+    </form>
 
-  <script>
-    let voices = [];
-    let selectedVoice = null;
+    {% if filename %}
+    <h3>Click on a word to hear it:</h3>
+    <div class="image-container" id="imageContainer">
+        <img src="{{ url_for('static', filename='uploads/' + filename) }}" id="uploadedImage">
 
-    function populateVoiceList() {
-      voices = window.speechSynthesis.getVoices();
+        <script>
+            const boxes = JSON.parse(`{{ boxes | safe }}`);
+            const container = document.getElementById('imageContainer');
+            const img = document.getElementById('uploadedImage');
 
-      const voiceSelect = document.getElementById('voiceSelect');
-      voiceSelect.innerHTML = ''; // Clear old options
+            img.onload = () => {
+                const scaleX = img.width / img.naturalWidth;
+                const scaleY = img.height / img.naturalHeight;
 
-      voices.forEach((voice, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `${voice.name} (${voice.lang})`;
-        voiceSelect.appendChild(option);
+                boxes.forEach(box => {
+                    const div = document.createElement('div');
+                    div.className = 'word-box';
+                    div.style.left = (box.left * scaleX) + 'px';
+                    div.style.top = (box.top * scaleY) + 'px';
+                    div.style.width = (box.width * scaleX) + 'px';
+                    div.style.height = (box.height * scaleY) + 'px';
+                    div.title = box.text;
 
-        if (
-          voice.name.includes("Google UK English Female") ||
-          voice.name.includes("Google US English") ||
-          voice.name.includes("Microsoft Zira")
-        ) {
-          voiceSelect.selectedIndex = index;
-          selectedVoice = voice;
+                    div.onclick = () => {
+                        speakText(box.text);  // Use selected voice
+                    };
+
+                    container.appendChild(div);
+                });
+            };
+        </script>
+    </div>
+
+    <script>
+        const voiceSelect = document.getElementById('voiceSelect');
+        let voices = [];
+
+        function populateVoices() {
+            voices = speechSynthesis.getVoices();
+
+            if (voices.length === 0) {
+                setTimeout(populateVoices, 100);
+                return;
+            }
+
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [default]' : ''}`;
+                voiceSelect.appendChild(option);
+            });
         }
-      });
-    }
 
-    function speak(text) {
-      const clean = text.replace(/[.,!?]/g, "");
-      const msg = new SpeechSynthesisUtterance(clean);
-      if (selectedVoice) msg.voice = selectedVoice;
-      msg.rate = 0.85;
-      window.speechSynthesis.speak(msg);
-    }
+        function speakText(text) {
+            const utter = new SpeechSynthesisUtterance(text);
+            const selectedVoiceIndex = voiceSelect.value;
+            if (voices[selectedVoiceIndex]) {
+                utter.voice = voices[selectedVoiceIndex];
+            }
+            speechSynthesis.speak(utter);
+        }
 
-    function readFullSentence() {
-      const textContainer = document.getElementById('book-text');
-      const fullText = textContainer.innerText;
-      const clean = fullText.replace(/\s+/g, ' ').replace(/[.,!?]/g, "");
-      const msg = new SpeechSynthesisUtterance(clean);
-      if (selectedVoice) msg.voice = selectedVoice;
-      msg.rate = 0.85;
-      window.speechSynthesis.speak(msg);
-    }
-
-    document.getElementById('voiceSelect').addEventListener('change', function () {
-      selectedVoice = voices[this.value];
-    });
-
-    populateVoiceList();
-    window.speechSynthesis.onvoiceschanged = populateVoiceList;
-  </script>
+        if (typeof speechSynthesis !== 'undefined') {
+            speechSynthesis.onvoiceschanged = populateVoices;
+            populateVoices();
+        }
+    </script>
+    {% endif %}
 </body>
 </html>
