@@ -17,20 +17,30 @@
     </style>
 </head>
 <body>
+    <label for="voiceSelect">Choose Voice:</label>
+    <select id="voiceSelect"></select>
+
     <h2>Upload an image</h2>
     <form method="post" enctype="multipart/form-data">
-        <input type="file" name="image" required>
+        <!-- Upload from local -->
+        <label>Choose from device:</label><br>
+        <input type="file" name="image" accept="image/*"><br><br>
+
+        <!-- Upload from camera -->
+        <label>Take a photo:</label><br>
+        <input type="file" name="image" accept="image/*" capture="environment"><br><br>
+
         <input type="submit" value="Upload">
     </form>
 
     {% if filename %}
     <h3>Click on a word to hear it:</h3>
-    <div class="image-container">
+    <div class="image-container" id="imageContainer">
         <img src="{{ url_for('static', filename='uploads/' + filename) }}" id="uploadedImage">
-        <!-- Word Overlays -->
+
         <script>
             const boxes = JSON.parse(`{{ boxes | safe }}`);
-            const container = document.querySelector('.image-container');
+            const container = document.getElementById('imageContainer');
             const img = document.getElementById('uploadedImage');
 
             img.onload = () => {
@@ -47,8 +57,7 @@
                     div.title = box.text;
 
                     div.onclick = () => {
-                        const utter = new SpeechSynthesisUtterance(box.text);
-                        speechSynthesis.speak(utter);
+                        speakText(box.text);  // Use selected voice
                     };
 
                     container.appendChild(div);
@@ -56,6 +65,42 @@
             };
         </script>
     </div>
+
+    <script>
+        const voiceSelect = document.getElementById('voiceSelect');
+        let voices = [];
+
+        function populateVoices() {
+            voices = speechSynthesis.getVoices();
+
+            if (voices.length === 0) {
+                setTimeout(populateVoices, 100);
+                return;
+            }
+
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [default]' : ''}`;
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        function speakText(text) {
+            const utter = new SpeechSynthesisUtterance(text);
+            const selectedVoiceIndex = voiceSelect.value;
+            if (voices[selectedVoiceIndex]) {
+                utter.voice = voices[selectedVoiceIndex];
+            }
+            speechSynthesis.speak(utter);
+        }
+
+        if (typeof speechSynthesis !== 'undefined') {
+            speechSynthesis.onvoiceschanged = populateVoices;
+            populateVoices();
+        }
+    </script>
     {% endif %}
 </body>
 </html>
