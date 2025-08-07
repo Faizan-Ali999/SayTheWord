@@ -2,10 +2,20 @@
 <html>
 <head>
     <title>Clickable Image Text</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+        body {
+            font-family: sans-serif;
+            font-size: 16px;
+            padding: 10px;
+            max-width: 600px;
+            margin: auto;
+        }
+
         .image-container {
             position: relative;
             display: inline-block;
+            max-width: 100%;
         }
 
         .word-box {
@@ -14,93 +24,182 @@
             background-color: rgba(255, 255, 255, 0.2);
             cursor: pointer;
         }
+
+        .flash-message {
+            color: red;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .preview {
+            max-width: 100%;
+            display: none;
+            margin-top: 10px;
+        }
+
+        #voiceSelect {
+            margin-bottom: 15px;
+            font-size: 16px;
+            padding: 4px;
+        }
+
+        input[type="file"] {
+            font-size: 16px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 4px;
+            margin-bottom: 12px;
+        }
+
+        input[type="submit"] {
+            font-size: 16px;
+            padding: 8px 12px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        #uploadedImage {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
+
     <label for="voiceSelect">Choose Voice:</label>
     <select id="voiceSelect"></select>
 
-    <h2>Upload an image</h2>
-    <form method="post" enctype="multipart/form-data">
-        <!-- Upload from local -->
-        <label>Choose from device:</label><br>
-        <input type="file" name="image" accept="image/*"><br><br>
+    <h2>Upload an Image</h2>
 
-        <!-- Upload from camera -->
-        <label>Take a photo:</label><br>
-        <input type="file" name="image" accept="image/*" capture="environment"><br><br>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-message">
+                {% for message in messages %}
+                    <div>{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-        <input type="submit" value="Upload">
+    <form method="post" enctype="multipart/form-data" class="upload-section">
+        <label>Choose from device:</label>
+        <input type="file" name="image" accept="image/*" onchange="previewFile(this)">
+
+        <label>Take a photo:</label>
+        <input type="file" name="image" accept="image/*" capture="environment" onchange="previewFile(this)">
+
+        <img id="imagePreview" class="preview" alt="Image preview...">
+
+        <input type="submit" value="Upload Image">
     </form>
 
     {% if filename %}
-    <h3>Click on a word to hear it:</h3>
-    <div class="image-container" id="imageContainer">
-        <img src="{{ url_for('static', filename='uploads/' + filename) }}" id="uploadedImage">
+        <h3>Click on a word to hear it:</h3>
+        <div class="image-container" id="imageContainer">
+            <img src="{{ url_for('static', filename='uploads/' + filename) }}" id="uploadedImage">
 
-        <script>
-            const boxes = JSON.parse(`{{ boxes | safe }}`);
-            const container = document.getElementById('imageContainer');
-            const img = document.getElementById('uploadedImage');
 
-            img.onload = () => {
-                const scaleX = img.width / img.naturalWidth;
-                const scaleY = img.height / img.naturalHeight;
+            <script>
+                const boxes = JSON.parse(`{{ boxes | safe }}`);
+                const container = document.getElementById('imageContainer');
+                const img = document.getElementById('uploadedImage');
 
-                boxes.forEach(box => {
-                    const div = document.createElement('div');
-                    div.className = 'word-box';
-                    div.style.left = (box.left * scaleX) + 'px';
-                    div.style.top = (box.top * scaleY) + 'px';
-                    div.style.width = (box.width * scaleX) + 'px';
-                    div.style.height = (box.height * scaleY) + 'px';
-                    div.title = box.text;
+                img.onload = () => {
+                    const scaleX = img.width / img.naturalWidth;
+                    const scaleY = img.height / img.naturalHeight;
 
-                    div.onclick = () => {
-                        speakText(box.text);  // Use selected voice
-                    };
+                    boxes.forEach(box => {
+                        const div = document.createElement('div');
+                        div.className = 'word-box';
+                        div.style.left = (box.left * scaleX) + 'px';
+                        div.style.top = (box.top * scaleY) + 'px';
+                        div.style.width = (box.width * scaleX) + 'px';
+                        div.style.height = (box.height * scaleY) + 'px';
+                        div.title = box.text;
 
-                    container.appendChild(div);
-                });
-            };
-        </script>
-    </div>
+                        div.onclick = () => speakText(box.text);
+                        container.appendChild(div);
+                    });
+                };
+            </script>
+        </div>
+    {% endif %}
 
     <script>
-        const voiceSelect = document.getElementById('voiceSelect');
-        let voices = [];
+    const voiceSelect = document.getElementById('voiceSelect');
+    let voices = [];
 
-        function populateVoices() {
-            voices = speechSynthesis.getVoices();
+    function populateVoices() {
+        voices = speechSynthesis.getVoices();
 
-            if (voices.length === 0) {
-                setTimeout(populateVoices, 100);
-                return;
-            }
-
-            voiceSelect.innerHTML = '';
-            voices.forEach((voice, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [default]' : ''}`;
-                voiceSelect.appendChild(option);
-            });
+        if (voices.length === 0) {
+            setTimeout(populateVoices, 100);
+            return;
         }
 
-        function speakText(text) {
-            const utter = new SpeechSynthesisUtterance(text);
-            const selectedVoiceIndex = voiceSelect.value;
-            if (voices[selectedVoiceIndex]) {
-                utter.voice = voices[selectedVoiceIndex];
-            }
-            speechSynthesis.speak(utter);
-        }
+        voiceSelect.innerHTML = '';
+        voices.forEach((voice) => {
+            const option = document.createElement('option');
+            option.value = voice.name; // ✅ Use voice name as value
+            option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [default]' : ''}`;
+            voiceSelect.appendChild(option);
+        });
+    }
 
-        if (typeof speechSynthesis !== 'undefined') {
-            speechSynthesis.onvoiceschanged = populateVoices;
-            populateVoices();
+    function speakText(text) {
+        const utter = new SpeechSynthesisUtterance(text);
+        const selectedVoiceName = voiceSelect.value;
+        const selectedVoice = voices.find(v => v.name === selectedVoiceName); // ✅ Find by name
+        if (selectedVoice) {
+            utter.voice = selectedVoice;
         }
-    </script>
-    {% endif %}
+        speechSynthesis.speak(utter);
+    }
+
+    if (typeof speechSynthesis !== 'undefined') {
+        speechSynthesis.onvoiceschanged = populateVoices;
+        populateVoices();
+    }
+
+    function previewFile(input) {
+        const file = input.files[0];
+        const preview = document.getElementById('imagePreview');
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+            preview.src = reader.result;
+            preview.style.display = 'block';
+        };
+
+        if (file) {
+            reader.readAsDataURL(file);
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+        }
+    }
+</script>
+
 </body>
 </html>
