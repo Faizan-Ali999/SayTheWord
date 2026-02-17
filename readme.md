@@ -6,15 +6,15 @@
 
 ## 🚀 Features
 
-### ✅ Version 1 (V1):
+### ✅ Original Version:
 - Upload or type any sentence.
 - Click on any word to hear it pronounced using browser-based text-to-speech.
 - Ideal for kids learning to read and pronounce English words correctly.
 
-### 🖼️ Version 2 (V2 - Current):
-- Upload a picture from local storage (e.g., a page of a book).
-- The app uses OCR (Optical Character Recognition) to detect words directly **on the image**.
-- Users can click **on the image itself** to hear the spoken word at the clicked location.
+### 🔄 Enhanced Version (Current: `UploadPics` branch):
+- Upload a picture from local storage or phone camera (e.g., a book page).
+- Uses OCR (Optical Character Recognition) to detect words directly on the image.
+- Users can click **on the image itself** to hear the word at the clicked spot.
 
 ---
 
@@ -26,12 +26,3 @@
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) via `pytesseract`
 - Pillow (image processing)
 - Web Speech API (for browser TTS)
-
----
-
-## 📂 How to Run Locally
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your-username/saytheword.git
-cd saytheword
